@@ -1,0 +1,48 @@
+---
+
+- name: Build CA with SSL
+  hosts: server1
+
+
+  tasks:
+    - name: install OpenSSL
+      package:
+        name: openssl
+        state: present
+
+    - name: Create key directory
+      file:
+        path: ~/etc/ssl/CA/key
+        state: directory
+
+    - name: Generate Key
+      openssl_privatekey:
+        path: ~/etc/ssl/CA/key/private_key
+
+    - name: Generate config file for CA
+      copy:
+        dest: ~/etc/ssl/CA/key/ca.conf
+        content: |
+          [req]
+          default_bits = 2048
+          default_md = sha256
+          prompt = no
+          encrypt_key = no
+          distinguished_name = dn
+          req_extensionts = ext
+
+          [dn]
+          CN = Certificate
+
+          [ext]
+          basicConstraints = CA:TRUE,pathlen:0
+
+    - name: Generate CA certificate
+      shell: openssl req -new -x509 -days 365 -key ~/etc/ssl/CA/key/private_key -out ~/etc/ssl/CA/key/ca.crt -config ~/etc/ssl/CA/key/ca.conf
+
+    - name: Fetch Cerficate from server Node to Manage Node
+      fetch:
+        src: ~/etc/ssl/CA/key/ca.crt
+        dest: ~/HOA9.1/Certificate.crt
+        flat: yes
+      register: fetch
